@@ -1,0 +1,1528 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Offensive Operations Dashboard</title>
+  <style>
+    :root {
+      --bg: #030708;
+      --bg-soft: #071011;
+      --panel: rgba(13, 22, 22, 0.93);
+      --panel-strong: #0d1515;
+      --panel-hover: #101c1b;
+      --line: rgba(178, 217, 211, 0.09);
+      --line-strong: rgba(89, 240, 228, 0.2);
+      --text: #f4f8f7;
+      --muted: #86918f;
+      --muted-2: #5f6b69;
+      --cyan: #58efe4;
+      --cyan-bright: #83fff5;
+      --cyan-dim: #1fa39b;
+      --amber: #f5b764;
+      --red: #ff7373;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 320px; background: var(--bg); }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 78% 4%, rgba(42, 154, 145, 0.18), transparent 34rem),
+        radial-gradient(circle at 0% 88%, rgba(21, 86, 87, 0.14), transparent 30rem),
+        linear-gradient(145deg, #020708 0%, #071011 48%, #020606 100%);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      letter-spacing: -0.01em;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+
+    .shell {
+      width: min(1460px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .dashboard {
+      position: relative;
+      overflow: hidden;
+      min-height: calc(100vh - 76px);
+      border: 1px solid rgba(120, 184, 177, 0.17);
+      border-radius: 27px;
+      background: rgba(2, 7, 8, 0.88);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .dashboard::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(82, 239, 228, 0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(82, 239, 228, 0.018) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, black, transparent 68%);
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      min-height: 82px;
+      padding: 18px 26px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(4, 10, 10, 0.78);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      min-width: 252px;
+    }
+
+    .brand-mark {
+      position: relative;
+      display: grid;
+      width: 42px;
+      height: 42px;
+      grid-template-columns: repeat(3, 7px);
+      grid-auto-rows: 7px;
+      place-content: center;
+      gap: 3px;
+      border: 1px solid rgba(87, 239, 227, 0.14);
+      border-radius: 12px;
+      background: linear-gradient(145deg, rgba(77, 236, 224, 0.15), rgba(77, 236, 224, 0.03));
+      box-shadow: inset 0 0 22px rgba(78, 238, 226, 0.05);
+    }
+
+    .brand-mark i {
+      width: 7px;
+      height: 7px;
+      border-radius: 2px;
+      background: var(--cyan);
+      box-shadow: 0 0 10px rgba(88, 239, 228, 0.45);
+    }
+
+    .brand-mark i:nth-child(2), .brand-mark i:nth-child(6) { opacity: 0; }
+    .brand-mark i:nth-child(5), .brand-mark i:nth-child(7) { opacity: 0.55; }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 620;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-copy span {
+      display: block;
+      margin-top: 1px;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .top-chip, .icon-button, .agent-trigger {
+      border: 1px solid var(--line);
+      background: #0c1414;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    }
+
+    .top-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 13px;
+      border-radius: 10px;
+      color: #b9c2c0;
+      font-size: 12px;
+    }
+
+    .top-chip .dot, .state-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--cyan);
+      box-shadow: 0 0 11px rgba(88, 239, 228, 0.7);
+    }
+
+    .state-dot.offline {
+      background: var(--muted-2);
+      box-shadow: none;
+    }
+
+    .icon-button, .agent-trigger {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    .icon-button:hover, .agent-trigger:hover {
+      border-color: var(--line-strong);
+      background: #111e1d;
+      transform: translateY(-1px);
+    }
+
+    .icon-button:disabled { cursor: wait; opacity: 0.65; }
+
+    .icon-button:focus-visible, .agent-trigger:focus-visible, .send-button:focus-visible,
+    .agent-form input:focus-visible, .data-contract summary:focus-visible,
+    .agent-suggestion:focus-visible {
+      outline: 2px solid rgba(88, 239, 228, 0.7);
+      outline-offset: 2px;
+    }
+
+    .refresh-button.loading svg { animation: spin 700ms linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 30px;
+    }
+
+    .hero {
+      position: relative;
+      display: flex;
+      min-height: 170px;
+      align-items: flex-end;
+      overflow: hidden;
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at 81% 25%, rgba(77, 233, 222, 0.16), transparent 16rem),
+        linear-gradient(120deg, rgba(14, 28, 28, 0.98), rgba(5, 13, 14, 0.92));
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: 8%;
+      width: 400px;
+      height: 400px;
+      border: 1px solid rgba(83, 238, 226, 0.11);
+      border-radius: 50%;
+      transform: translateY(-50%);
+      box-shadow:
+        0 0 0 46px rgba(83, 238, 226, 0.025),
+        0 0 0 92px rgba(83, 238, 226, 0.015);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.24;
+      background-image:
+        radial-gradient(circle, rgba(121, 248, 238, 0.45) 1px, transparent 1.5px),
+        linear-gradient(24deg, transparent 49.8%, rgba(87, 238, 227, 0.15) 50%, transparent 50.2%);
+      background-size: 34px 34px, 180px 180px;
+      mask-image: linear-gradient(90deg, transparent 35%, black);
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 1;
+      padding-right: 250px;
+    }
+
+    .hero-status {
+      position: absolute;
+      z-index: 2;
+      top: 50%;
+      right: 34px;
+      display: flex;
+      width: 190px;
+      align-items: center;
+      gap: 15px;
+      transform: translateY(-50%);
+    }
+
+    .hero-radar {
+      position: relative;
+      display: grid;
+      width: 66px;
+      height: 66px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(88, 239, 228, 0.24);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(88, 239, 228, 0.1), transparent 66%);
+      box-shadow: inset 0 0 22px rgba(88, 239, 228, 0.05);
+    }
+
+    .hero-radar::before {
+      content: "";
+      position: absolute;
+      inset: 9px;
+      border: 1px solid rgba(88, 239, 228, 0.12);
+      border-radius: 50%;
+    }
+
+    .hero-radar::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 14px rgba(88, 239, 228, 0.8);
+    }
+
+    .radar-sweep {
+      position: absolute;
+      inset: 5px;
+      overflow: hidden;
+      border-radius: 50%;
+      animation: spin 6s linear infinite;
+    }
+
+    .radar-sweep::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 50%;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(88, 239, 228, 0.8), transparent);
+      transform-origin: left center;
+    }
+
+    .hero-status-copy span {
+      display: block;
+      color: #70807d;
+      font-size: 9px;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .hero-status-copy strong {
+      display: block;
+      margin-top: 4px;
+      color: #d4dddb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 11px;
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.17em;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 22px;
+      height: 1px;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 3.5vw, 45px);
+      font-weight: 450;
+      line-height: 1.08;
+      letter-spacing: -0.045em;
+    }
+
+    .hero p {
+      max-width: 620px;
+      margin: 12px 0 0;
+      color: #9ca7a4;
+      font-size: 14px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      position: relative;
+      min-height: 150px;
+      overflow: hidden;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(16, 26, 26, 0.96), rgba(10, 17, 17, 0.96));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+      transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+    }
+
+    .metric-card:hover {
+      border-color: rgba(88, 239, 228, 0.16);
+      background: linear-gradient(145deg, rgba(18, 31, 30, 0.98), rgba(10, 18, 18, 0.98));
+      transform: translateY(-2px);
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 20px;
+      width: 42px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--cyan), transparent);
+      box-shadow: 0 0 8px rgba(88, 239, 228, 0.45);
+    }
+
+    .metric-card::after {
+      content: "";
+      position: absolute;
+      right: -35px;
+      bottom: -40px;
+      width: 110px;
+      height: 110px;
+      border: 1px solid rgba(88, 239, 228, 0.07);
+      border-radius: 50%;
+      box-shadow: 0 0 0 19px rgba(88, 239, 228, 0.018);
+    }
+
+    .metric-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .metric-label {
+      color: #aeb7b5;
+      font-size: 12px;
+      font-weight: 520;
+    }
+
+    .metric-icon {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border: 1px solid rgba(87, 239, 227, 0.12);
+      border-radius: 8px;
+      color: var(--cyan);
+      background: rgba(73, 225, 214, 0.055);
+    }
+
+    .metric-value {
+      position: relative;
+      z-index: 1;
+      margin-top: 25px;
+      font-size: clamp(29px, 3vw, 40px);
+      font-weight: 350;
+      line-height: 1;
+      letter-spacing: -0.055em;
+    }
+
+    .metric-unit {
+      margin-left: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 450;
+      letter-spacing: 0;
+    }
+
+    .section-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(10, 17, 17, 0.94);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 72px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-icon {
+      position: relative;
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      color: var(--cyan);
+      background: rgba(88, 239, 228, 0.04);
+    }
+
+    .section-icon::after {
+      content: "";
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 580;
+      letter-spacing: -0.01em;
+    }
+
+    .section-subtitle {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .session-count {
+      padding: 6px 10px;
+      border: 1px solid rgba(88, 239, 228, 0.12);
+      border-radius: 999px;
+      color: var(--cyan);
+      background: rgba(88, 239, 228, 0.04);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .table-wrap {
+      max-height: 520px;
+      overflow: auto;
+      scrollbar-color: #1f4240 transparent;
+      scrollbar-width: thin;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      padding: 17px 20px;
+      border-bottom: 1px solid rgba(178, 217, 211, 0.065);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      position: sticky;
+      z-index: 2;
+      top: 0;
+      color: #6f7c79;
+      background: rgba(8, 14, 14, 0.97);
+      box-shadow: 0 1px 0 rgba(178, 217, 211, 0.065);
+      font-size: 10px;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+    }
+
+    tbody tr { transition: background 140ms ease; }
+    tbody tr:hover { background: rgba(88, 239, 228, 0.025); }
+    tbody tr:last-child td { border-bottom: 0; }
+
+    td {
+      color: #c7cecc;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .target-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+      font-weight: 520;
+    }
+
+    .target-pip {
+      flex: 0 0 auto;
+      width: 7px;
+      height: 7px;
+      border: 1px solid var(--cyan);
+      border-radius: 2px;
+      transform: rotate(45deg);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      max-width: 100%;
+      padding: 5px 9px;
+      border: 1px solid rgba(88, 239, 228, 0.11);
+      border-radius: 999px;
+      color: #a8e9e3;
+      background: rgba(88, 239, 228, 0.045);
+      font-size: 11px;
+    }
+
+    .status-badge::before {
+      content: "";
+      flex: 0 0 auto;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 7px rgba(88, 239, 228, 0.55);
+    }
+
+    .status-badge.waiting {
+      border-color: rgba(245, 183, 100, 0.14);
+      color: #edc690;
+      background: rgba(245, 183, 100, 0.05);
+    }
+
+    .status-badge.waiting::before {
+      background: var(--amber);
+      box-shadow: 0 0 7px rgba(245, 183, 100, 0.5);
+    }
+
+    .status-badge.ended {
+      border-color: rgba(134, 145, 143, 0.13);
+      color: #899390;
+      background: rgba(134, 145, 143, 0.045);
+    }
+
+    .status-badge.ended::before { background: #717c79; box-shadow: none; }
+
+    .empty-row td {
+      height: 210px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .empty-state {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+    }
+
+    .empty-orbit {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(88, 239, 228, 0.2);
+      border-radius: 50%;
+    }
+
+    .empty-orbit::before, .empty-orbit::after {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border: 1px solid rgba(88, 239, 228, 0.11);
+      border-radius: 50%;
+    }
+
+    .empty-orbit::after {
+      inset: 20px;
+      border: 0;
+      background: var(--cyan-dim);
+      box-shadow: 0 0 12px rgba(88, 239, 228, 0.4);
+    }
+
+    .empty-state strong {
+      margin-bottom: 3px;
+      color: #b7c0be;
+      font-size: 13px;
+      font-weight: 540;
+    }
+
+    .empty-state span { font-size: 11px; }
+
+    .footer-note {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 2px 2px 0;
+      color: #596562;
+      font-size: 10px;
+      letter-spacing: 0.03em;
+    }
+
+    .footer-note code {
+      color: #84908e;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .data-contract {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(9, 16, 16, 0.84);
+    }
+
+    .data-contract summary {
+      display: flex;
+      min-height: 56px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      color: #bac3c1;
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+    }
+
+    .data-contract summary::-webkit-details-marker { display: none; }
+
+    .contract-summary-copy {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 560;
+    }
+
+    .contract-summary-copy svg { color: var(--cyan); }
+
+    .contract-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #66736f;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .contract-toggle svg { transition: transform 160ms ease; }
+    .data-contract[open] .contract-toggle svg { transform: rotate(180deg); }
+
+    .contract-body {
+      padding: 0 18px 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .contract-note {
+      margin: 14px 0;
+      color: #74817e;
+      font-size: 11px;
+    }
+
+    .contract-note code, .contract-row code {
+      color: #a9ddd8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .contract-grid {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .contract-row {
+      display: grid;
+      grid-template-columns: minmax(190px, 0.9fr) minmax(90px, 0.35fr) minmax(260px, 1.5fr);
+      gap: 16px;
+      align-items: center;
+      min-height: 42px;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--line);
+      color: #87928f;
+      font-size: 11px;
+    }
+
+    .contract-row:last-child { border-bottom: 0; }
+    .contract-row > span:nth-child(2) { color: #697572; }
+
+    .drawer-scrim {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      visibility: hidden;
+      background: rgba(0, 0, 0, 0.52);
+      opacity: 0;
+      transition: 180ms ease;
+    }
+
+    .drawer-scrim.open { visibility: visible; opacity: 1; }
+
+    .agent-panel {
+      position: fixed;
+      z-index: 21;
+      top: 18px;
+      right: 18px;
+      bottom: 18px;
+      display: flex;
+      width: min(390px, calc(100vw - 36px));
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid rgba(111, 223, 214, 0.18);
+      border-radius: 19px;
+      background: rgba(7, 14, 14, 0.985);
+      box-shadow: -24px 0 80px rgba(0, 0, 0, 0.48);
+      transform: translateX(calc(100% + 28px));
+      transition: transform 220ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .agent-panel.open { transform: translateX(0); }
+
+    .agent-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+      background: #0b1414;
+    }
+
+    .agent-avatar {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 11px;
+      color: var(--cyan);
+      background: rgba(88, 239, 228, 0.05);
+    }
+
+    .agent-head-copy { flex: 1; }
+    .agent-head-copy h2 { font-size: 14px; }
+
+    .agent-state {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+      color: #75918d;
+      font-size: 10px;
+    }
+
+    .agent-log {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      padding: 18px;
+      scrollbar-color: #1f4240 transparent;
+      scrollbar-width: thin;
+    }
+
+    .message {
+      max-width: 88%;
+      padding: 11px 13px;
+      border-radius: 12px;
+      color: #c1cac8;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .message.agent {
+      align-self: flex-start;
+      border: 1px solid var(--line);
+      border-top-left-radius: 4px;
+      background: #101919;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      border: 1px solid rgba(88, 239, 228, 0.13);
+      border-top-right-radius: 4px;
+      color: #d7f2ef;
+      background: rgba(40, 145, 137, 0.15);
+    }
+
+    .agent-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding: 0 14px 12px;
+      background: #0a1212;
+    }
+
+    .agent-suggestion {
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #84918e;
+      background: #0d1717;
+      font-size: 10px;
+      cursor: pointer;
+      transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+    }
+
+    .agent-suggestion:hover {
+      border-color: rgba(88, 239, 228, 0.2);
+      color: #c6e9e5;
+      background: rgba(88, 239, 228, 0.05);
+    }
+
+    .agent-form {
+      display: flex;
+      gap: 8px;
+      padding: 14px;
+      border-top: 1px solid var(--line);
+      background: #0a1212;
+    }
+
+    .agent-form input {
+      min-width: 0;
+      flex: 1;
+      height: 42px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+      color: var(--text);
+      background: #0d1717;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .agent-form input::placeholder { color: #596562; }
+
+    .agent-form input:focus {
+      border-color: rgba(88, 239, 228, 0.3);
+      box-shadow: 0 0 0 3px rgba(88, 239, 228, 0.045);
+    }
+
+    .send-button {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border: 1px solid rgba(88, 239, 228, 0.24);
+      border-radius: 10px;
+      color: #071010;
+      background: var(--cyan);
+      cursor: pointer;
+      transition: 150ms ease;
+    }
+
+    .send-button:hover { background: var(--cyan-bright); transform: translateY(-1px); }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    svg { display: block; }
+
+    @media (max-width: 900px) {
+      .shell { width: min(100% - 28px, 1460px); padding: 14px 0 28px; }
+      .dashboard { min-height: calc(100vh - 42px); border-radius: 21px; }
+      .topbar { padding: 16px 18px; }
+      .brand { min-width: 0; }
+      .brand-copy span { display: none; }
+      .top-chip { display: none; }
+      .content { padding: 20px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero { min-height: 190px; padding: 24px; }
+      .hero-copy { padding-right: 0; }
+      .hero-status { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      .shell { width: 100%; padding: 0; }
+      .dashboard { min-height: 100vh; border: 0; border-radius: 0; }
+      .topbar { min-height: 68px; padding: 13px 15px; }
+      .brand-mark { width: 38px; height: 38px; }
+      .brand-copy strong { font-size: 13px; }
+      .content { gap: 12px; padding: 14px; }
+      .hero { min-height: 178px; padding: 21px 18px; border-radius: 13px; }
+      .hero::before { right: -55%; }
+      .hero p { font-size: 12px; }
+      .metrics { grid-template-columns: 1fr; gap: 8px; }
+      .metric-card { min-height: 112px; padding: 16px; }
+      .metric-value { margin-top: 16px; font-size: 31px; }
+      .section-card { border-radius: 13px; }
+      .section-head { min-height: 64px; padding: 13px 15px; }
+      .section-subtitle { display: none; }
+
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      tbody { padding: 6px 13px; }
+      tbody tr {
+        margin: 8px 0;
+        padding: 4px 0;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: rgba(13, 22, 22, 0.7);
+      }
+      td {
+        display: grid;
+        grid-template-columns: 94px minmax(0, 1fr);
+        align-items: center;
+        min-height: 43px;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      td::before {
+        content: attr(data-label);
+        color: #66726f;
+        font-size: 9px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: 0.11em;
+      }
+      tbody tr:not(.empty-row) td:last-child { border-bottom: 0; }
+      .empty-row { border: 0; background: transparent; }
+      .empty-row td { display: block; height: 190px; padding: 34px 10px; border: 0; }
+      .empty-row td::before { display: none; }
+      .table-wrap { max-height: none; }
+      .contract-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+        padding: 11px 12px;
+      }
+      .contract-row > span:last-child { margin-top: 3px; }
+      .contract-toggle span { display: none; }
+      .footer-note { flex-direction: column; align-items: flex-start; gap: 2px; }
+      .agent-panel { top: 0; right: 0; bottom: 0; width: min(100%, 430px); border-radius: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <main class="dashboard" aria-labelledby="page-title">
+      <header class="topbar">
+        <div class="brand" aria-label="Offensive operations">
+          <div class="brand-mark" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <div class="brand-copy">
+            <strong>Operations Console</strong>
+            <span>Live telemetry</span>
+          </div>
+        </div>
+
+        <div class="topbar-meta">
+          <div class="top-chip" id="state-chip" role="status">
+            <span class="state-dot offline" id="state-dot"></span>
+            <span id="state-label">State unavailable</span>
+          </div>
+          <button class="icon-button refresh-button" id="state-refresh" type="button" aria-label="Reload state.json" title="Reload state.json">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 6v5h-5M4 18v-5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M18.2 9A7 7 0 0 0 6.1 6.7L4 11M5.8 15A7 7 0 0 0 17.9 17.3L20 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="agent-trigger" id="agent-open" type="button" aria-controls="agent-panel" aria-expanded="false" aria-label="Open Agent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M8.4 18.2 4 20l1.8-4.4A7.5 7.5 0 1 1 8.4 18.2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              <path d="M9 12h.01M12 12h.01M15 12h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="hero" aria-labelledby="page-title">
+          <div class="hero-copy">
+            <div class="eyebrow">Offensive intelligence</div>
+            <h1 id="page-title">Attacking Operations Center</h1>
+            <p>Live operation telemetry and active session monitoring, loaded directly from the local state file.</p>
+          </div>
+          <div class="hero-status" aria-hidden="true">
+            <div class="hero-radar"><span class="radar-sweep"></span></div>
+            <div class="hero-status-copy">
+              <span>State source</span>
+              <strong>./state.json</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="metrics" aria-label="Operation metrics">
+          <article class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Targets Compromised</span>
+              <span class="metric-icon" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+              </span>
+            </div>
+            <div class="metric-value" id="targets-compromised">0</div>
+          </article>
+
+          <article class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Sessions Active</span>
+              <span class="metric-icon" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M7 17.5 3.5 14 7 10.5M17 6.5 20.5 10 17 13.5M14.5 4 9.5 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+            <div class="metric-value" id="sessions-active">0</div>
+          </article>
+
+          <article class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Payloads Delivered</span>
+              <span class="metric-icon" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m4 12 15-7-4 15-3-6-8-2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m12 14 7-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
+            </div>
+            <div class="metric-value" id="payloads-delivered">0</div>
+          </article>
+
+          <article class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Data Exfiltrated</span>
+              <span class="metric-icon" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M8 8l4-4 4 4M5 13v6h14v-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+            <div class="metric-value"><span id="data-exfiltrated">0</span><span class="metric-unit" id="data-exfiltrated-unit"></span></div>
+          </article>
+        </section>
+
+        <section class="section-card" aria-labelledby="sessions-title">
+          <header class="section-head">
+            <div class="section-title-wrap">
+              <span class="section-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 17 9 12l3 3 7-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 7h5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <div>
+                <h2 id="sessions-title">Live Attacking Sessions</h2>
+                <p class="section-subtitle">Current operation activity from state.json</p>
+              </div>
+            </div>
+            <span class="session-count" id="session-count">0 sessions</span>
+          </header>
+
+          <div class="table-wrap">
+            <table>
+              <caption class="sr-only">Live attacking sessions</caption>
+              <colgroup>
+                <col style="width: 34%">
+                <col style="width: 20%">
+                <col style="width: 24%">
+                <col style="width: 22%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">Target</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Method</th>
+                  <th scope="col">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="sessions-body">
+                <tr class="empty-row">
+                  <td colspan="4">
+                    <div class="empty-state">
+                      <div class="empty-orbit" aria-hidden="true"></div>
+                      <strong>No live sessions</strong>
+                      <span>Waiting for state.json</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <details class="data-contract">
+          <summary>
+            <span class="contract-summary-copy">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M12 4h8v8M20 4l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              state.json data contract
+            </span>
+            <span class="contract-toggle"><span>View fields</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </summary>
+          <div class="contract-body">
+            <p class="contract-note">Place <code>state.json</code> beside this HTML file. All fields are optional; missing or invalid metrics resolve to zero, and a missing sessions array resolves to an empty table.</p>
+            <div class="contract-grid" role="table" aria-label="state.json fields">
+              <div class="contract-row" role="row"><code role="cell">targets_compromised</code><span role="cell">number</span><span role="cell">Total compromised targets</span></div>
+              <div class="contract-row" role="row"><code role="cell">sessions_active</code><span role="cell">number</span><span role="cell">Current active-session count</span></div>
+              <div class="contract-row" role="row"><code role="cell">payloads_delivered</code><span role="cell">number</span><span role="cell">Total delivered payloads</span></div>
+              <div class="contract-row" role="row"><code role="cell">data_exfiltrated</code><span role="cell">number or string</span><span role="cell">Exfiltration amount to display</span></div>
+              <div class="contract-row" role="row"><code role="cell">data_exfiltrated_unit</code><span role="cell">string</span><span role="cell">Optional unit, such as bytes or GB</span></div>
+              <div class="contract-row" role="row"><code role="cell">sessions[]</code><span role="cell">array</span><span role="cell">Objects with target, status, method, and timestamp strings</span></div>
+            </div>
+          </div>
+        </details>
+
+        <div class="footer-note">
+          <span>Local operation view · no sample data</span>
+          <span>Source: <code>./state.json</code></span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="drawer-scrim" id="drawer-scrim" aria-hidden="true"></div>
+  <aside class="agent-panel" id="agent-panel" aria-labelledby="agent-title" aria-hidden="true">
+    <header class="agent-head">
+      <div class="agent-avatar" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 4h8M12 4V2M6 8h12v10H6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="12" r="1" fill="currentColor"/><circle cx="14.5" cy="12" r="1" fill="currentColor"/><path d="M9.5 15h5M3 11v4M21 11v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="agent-head-copy">
+        <h2 id="agent-title">Agent</h2>
+        <div class="agent-state"><span class="state-dot"></span>Operation context ready</div>
+      </div>
+      <button class="icon-button" id="agent-close" type="button" aria-label="Close Agent">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <div class="agent-log" id="agent-log" aria-live="polite">
+      <div class="message agent">Ask for a short summary of the current operation, active sessions, methods, or loaded metrics.</div>
+    </div>
+
+    <div class="agent-suggestions" aria-label="Suggested questions">
+      <button class="agent-suggestion" type="button" data-question="Summarize the operation">Operation summary</button>
+      <button class="agent-suggestion" type="button" data-question="What is the session status?">Session status</button>
+      <button class="agent-suggestion" type="button" data-question="Which methods are reported?">Methods</button>
+    </div>
+
+    <form class="agent-form" id="agent-form">
+      <label class="sr-only" for="agent-input">Question for Agent</label>
+      <input id="agent-input" type="text" maxlength="240" autocomplete="off" placeholder="Ask about this operation…">
+      <button class="send-button" type="submit" aria-label="Send question">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 12 16-8-5 16-3-6-8-2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m12 14 8-10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+    </form>
+  </aside>
+
+  <script>
+    "use strict";
+
+    const defaultState = Object.freeze({
+      targets_compromised: 0,
+      sessions_active: 0,
+      payloads_delivered: 0,
+      data_exfiltrated: 0,
+      data_exfiltrated_unit: "",
+      sessions: []
+    });
+
+    let operationState = { ...defaultState, sessions: [] };
+    let stateLoaded = false;
+
+    const elements = {
+      targets: document.getElementById("targets-compromised"),
+      active: document.getElementById("sessions-active"),
+      payloads: document.getElementById("payloads-delivered"),
+      exfiltrated: document.getElementById("data-exfiltrated"),
+      exfiltratedUnit: document.getElementById("data-exfiltrated-unit"),
+      sessionsBody: document.getElementById("sessions-body"),
+      sessionCount: document.getElementById("session-count"),
+      stateLabel: document.getElementById("state-label"),
+      stateDot: document.getElementById("state-dot"),
+      stateRefresh: document.getElementById("state-refresh"),
+      agentPanel: document.getElementById("agent-panel"),
+      agentOpen: document.getElementById("agent-open"),
+      agentClose: document.getElementById("agent-close"),
+      scrim: document.getElementById("drawer-scrim"),
+      agentLog: document.getElementById("agent-log"),
+      agentForm: document.getElementById("agent-form"),
+      agentInput: document.getElementById("agent-input")
+    };
+
+    function safeNumber(value) {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
+    }
+
+    function metricValue(source, snakeKey, camelKey) {
+      if (source.metrics && typeof source.metrics === "object") {
+        const nested = source.metrics[snakeKey] ?? source.metrics[camelKey];
+        if (nested !== undefined) return nested;
+      }
+      return source[snakeKey] ?? source[camelKey];
+    }
+
+    function normalizeState(source) {
+      const input = source && typeof source === "object" ? source : {};
+      const rawSessions = Array.isArray(input.sessions) ? input.sessions : [];
+      const exfilValue = metricValue(input, "data_exfiltrated", "dataExfiltrated");
+      const explicitUnit = metricValue(input, "data_exfiltrated_unit", "dataExfiltratedUnit");
+
+      return {
+        targets_compromised: safeNumber(metricValue(input, "targets_compromised", "targetsCompromised")),
+        sessions_active: safeNumber(metricValue(input, "sessions_active", "sessionsActive")),
+        payloads_delivered: safeNumber(metricValue(input, "payloads_delivered", "payloadsDelivered")),
+        data_exfiltrated: typeof exfilValue === "string" ? exfilValue.trim() || "0" : safeNumber(exfilValue),
+        data_exfiltrated_unit: typeof explicitUnit === "string" ? explicitUnit.trim() : "",
+        sessions: rawSessions.filter((item) => item && typeof item === "object").map((item) => ({
+          target: String(item.target ?? ""),
+          status: String(item.status ?? ""),
+          method: String(item.method ?? ""),
+          timestamp: String(item.timestamp ?? "")
+        }))
+      };
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(safeNumber(value));
+    }
+
+    function countLabel(value, singular, plural = `${singular}s`) {
+      const numeric = safeNumber(value);
+      return `${formatNumber(numeric)} ${numeric === 1 ? singular : plural}`;
+    }
+
+    function displayMetric(element, value) {
+      element.textContent = typeof value === "number" ? formatNumber(value) : value;
+    }
+
+    function createTextCell(label, value) {
+      const cell = document.createElement("td");
+      cell.dataset.label = label;
+      cell.textContent = value || "—";
+      return cell;
+    }
+
+    function statusTone(status) {
+      const normalized = status.toLowerCase();
+      if (["waiting", "pending", "queued", "staged"].some((word) => normalized.includes(word))) return "waiting";
+      if (["closed", "ended", "inactive", "lost", "stopped", "failed"].some((word) => normalized.includes(word))) return "ended";
+      return "";
+    }
+
+    function renderSessions(sessions) {
+      elements.sessionsBody.textContent = "";
+      elements.sessionCount.textContent = `${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`;
+
+      if (sessions.length === 0) {
+        const row = document.createElement("tr");
+        row.className = "empty-row";
+        const cell = document.createElement("td");
+        cell.colSpan = 4;
+
+        const state = document.createElement("div");
+        state.className = "empty-state";
+        const orbit = document.createElement("div");
+        orbit.className = "empty-orbit";
+        orbit.setAttribute("aria-hidden", "true");
+        const title = document.createElement("strong");
+        title.textContent = "No live sessions";
+        const detail = document.createElement("span");
+        detail.textContent = stateLoaded ? "No sessions are present in state.json" : "Waiting for state.json";
+        state.append(orbit, title, detail);
+        cell.appendChild(state);
+        row.appendChild(cell);
+        elements.sessionsBody.appendChild(row);
+        return;
+      }
+
+      sessions.forEach((session) => {
+        const row = document.createElement("tr");
+
+        const targetCell = document.createElement("td");
+        targetCell.dataset.label = "Target";
+        const targetWrap = document.createElement("div");
+        targetWrap.className = "target-cell";
+        const pip = document.createElement("span");
+        pip.className = "target-pip";
+        pip.setAttribute("aria-hidden", "true");
+        const targetText = document.createElement("span");
+        targetText.textContent = session.target || "—";
+        targetWrap.append(pip, targetText);
+        targetCell.appendChild(targetWrap);
+
+        const statusCell = document.createElement("td");
+        statusCell.dataset.label = "Status";
+        const badge = document.createElement("span");
+        badge.className = `status-badge ${statusTone(session.status)}`.trim();
+        badge.textContent = session.status || "—";
+        statusCell.appendChild(badge);
+
+        row.append(
+          targetCell,
+          statusCell,
+          createTextCell("Method", session.method),
+          createTextCell("Timestamp", session.timestamp)
+        );
+        elements.sessionsBody.appendChild(row);
+      });
+    }
+
+    function renderState(state) {
+      displayMetric(elements.targets, state.targets_compromised);
+      displayMetric(elements.active, state.sessions_active);
+      displayMetric(elements.payloads, state.payloads_delivered);
+      displayMetric(elements.exfiltrated, state.data_exfiltrated);
+      elements.exfiltratedUnit.textContent = state.data_exfiltrated_unit;
+      renderSessions(state.sessions);
+    }
+
+    async function loadState(showLoading = false) {
+      elements.stateRefresh.disabled = true;
+      elements.stateRefresh.classList.add("loading");
+      if (showLoading) elements.stateLabel.textContent = "Refreshing state";
+
+      try {
+        const response = await fetch("./state.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        operationState = normalizeState(await response.json());
+        stateLoaded = true;
+        elements.stateLabel.textContent = "State connected";
+        elements.stateDot.classList.remove("offline");
+      } catch (error) {
+        operationState = { ...defaultState, sessions: [] };
+        stateLoaded = false;
+        elements.stateLabel.textContent = "State unavailable";
+        elements.stateDot.classList.add("offline");
+      } finally {
+        elements.stateRefresh.disabled = false;
+        elements.stateRefresh.classList.remove("loading");
+      }
+      renderState(operationState);
+    }
+
+    function openAgent() {
+      elements.agentPanel.classList.add("open");
+      elements.scrim.classList.add("open");
+      elements.agentPanel.setAttribute("aria-hidden", "false");
+      elements.agentOpen.setAttribute("aria-expanded", "true");
+      document.body.style.overflow = "hidden";
+      window.setTimeout(() => elements.agentInput.focus(), 160);
+    }
+
+    function closeAgent() {
+      elements.agentPanel.classList.remove("open");
+      elements.scrim.classList.remove("open");
+      elements.agentPanel.setAttribute("aria-hidden", "true");
+      elements.agentOpen.setAttribute("aria-expanded", "false");
+      document.body.style.overflow = "";
+      elements.agentOpen.focus();
+    }
+
+    function addMessage(text, type) {
+      const message = document.createElement("div");
+      message.className = `message ${type}`;
+      message.textContent = text;
+      elements.agentLog.appendChild(message);
+      elements.agentLog.scrollTop = elements.agentLog.scrollHeight;
+    }
+
+    function summarizeMethods() {
+      const methods = operationState.sessions.map((session) => session.method).filter(Boolean);
+      if (methods.length === 0) return "No session methods are currently reported.";
+      const counts = methods.reduce((total, method) => {
+        total[method] = (total[method] || 0) + 1;
+        return total;
+      }, {});
+      const summary = Object.entries(counts).map(([method, count]) => `${method} (${count})`).join(", ");
+      return `Reported methods: ${summary}.`;
+    }
+
+    function summarizeStatuses() {
+      const statuses = operationState.sessions.map((session) => session.status).filter(Boolean);
+      if (statuses.length === 0) return "No session statuses are currently reported.";
+      const counts = statuses.reduce((total, status) => {
+        total[status] = (total[status] || 0) + 1;
+        return total;
+      }, {});
+      return `Session status: ${Object.entries(counts).map(([status, count]) => `${status} (${count})`).join(", ")}.`;
+    }
+
+    function agentAnswer(question) {
+      const query = question.toLowerCase();
+      if (!stateLoaded) return "state.json is unavailable. All displayed metrics are zero and no sessions are loaded.";
+      if (query.includes("method") || query.includes("vector") || query.includes("how")) return summarizeMethods();
+      if (query.includes("status") || query.includes("session") || query.includes("active")) {
+        return `${countLabel(operationState.sessions_active, "active session")} reported. ${summarizeStatuses()}`;
+      }
+      if (query.includes("target") || query.includes("comprom")) {
+        return `${countLabel(operationState.targets_compromised, "target")} reported as compromised.`;
+      }
+      if (query.includes("payload") || query.includes("deliver")) {
+        return `${countLabel(operationState.payloads_delivered, "payload")} reported as delivered.`;
+      }
+      if (query.includes("data") || query.includes("exfil")) {
+        const value = typeof operationState.data_exfiltrated === "number" ? formatNumber(operationState.data_exfiltrated) : operationState.data_exfiltrated;
+        return `${value}${operationState.data_exfiltrated_unit ? ` ${operationState.data_exfiltrated_unit}` : ""} is reported as exfiltrated.`;
+      }
+      return `Current state: ${countLabel(operationState.targets_compromised, "compromised target")}, ${countLabel(operationState.sessions_active, "active session")}, ${countLabel(operationState.payloads_delivered, "delivered payload")}, and ${countLabel(operationState.sessions.length, "session record")}.`;
+    }
+
+    function askAgent(question) {
+      const cleanQuestion = question.trim();
+      if (!cleanQuestion) return;
+      addMessage(cleanQuestion, "user");
+      elements.agentInput.value = "";
+      window.setTimeout(() => addMessage(agentAnswer(cleanQuestion), "agent"), 140);
+    }
+
+    elements.agentOpen.addEventListener("click", openAgent);
+    elements.agentClose.addEventListener("click", closeAgent);
+    elements.scrim.addEventListener("click", closeAgent);
+    elements.stateRefresh.addEventListener("click", () => loadState(true));
+    document.querySelectorAll(".agent-suggestion").forEach((button) => {
+      button.addEventListener("click", () => askAgent(button.dataset.question || button.textContent));
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && elements.agentPanel.classList.contains("open")) closeAgent();
+    });
+
+    elements.agentForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      askAgent(elements.agentInput.value);
+    });
+
+    renderState(operationState);
+    loadState();
+  </script>
+</body>
+</html>
