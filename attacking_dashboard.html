@@ -801,7 +801,7 @@
       overflow: hidden;
       border: 1px solid rgba(111, 223, 214, 0.18);
       border-radius: 19px;
-      background: rgba(7, 14, 14, 0.985);
+      background: #070e0e;
       box-shadow: -24px 0 80px rgba(0, 0, 0, 0.48);
       transform: translateX(calc(100% + 28px));
       transition: transform 220ms cubic-bezier(.2, .8, .2, 1);
@@ -1291,8 +1291,46 @@
       return source[snakeKey] ?? source[camelKey];
     }
 
+    function harvestTimestamp(value) {
+      const parsed = new Date(String(value || ""));
+      if (Number.isNaN(parsed.getTime())) return "";
+      return parsed.toISOString().slice(0, 16).replace("T", " ") + "Z";
+    }
+
+    // The merged workspace writes {targets, loot, c2}; the flat dashboard shape
+    // is {sessions, targets_compromised, ...}. Adapt the former onto the latter
+    // so real collection data drives the cards instead of reading as zeros.
+    function adaptHarvestState(input) {
+      const targets = Array.isArray(input.targets)
+        ? input.targets.filter((item) => item && typeof item === "object")
+        : [];
+      if (!targets.length) return null;
+
+      const loot = input.loot && typeof input.loot === "object" ? input.loot : {};
+      const c2 = input.c2 && typeof input.c2 === "object" ? input.c2 : {};
+      const isUp = (value) => /^(online|active|up|live)$/i.test(String(value || "").trim());
+
+      return {
+        targets_compromised: targets.length,
+        sessions_active: targets.filter((item) => isUp(item.status)).length,
+        payloads_delivered: safeNumber(c2.payload_files),
+        data_exfiltrated: safeNumber(loot.records),
+        data_exfiltrated_unit: "",
+        sessions: targets.map((item) => ({
+          target: String(item.hostname || item.id || ""),
+          status: String(item.status || "unknown"),
+          method: String(item.source || "") + (item.rooted ? " · rooted" : ""),
+          timestamp: harvestTimestamp(item.collected_at)
+        }))
+      };
+    }
+
     function normalizeState(source) {
       const input = source && typeof source === "object" ? source : {};
+      if (!Array.isArray(input.sessions) && Array.isArray(input.targets)) {
+        const adapted = adaptHarvestState(input);
+        if (adapted) return adapted;
+      }
       const rawSessions = Array.isArray(input.sessions) ? input.sessions : [];
       const exfilValue = metricValue(input, "data_exfiltrated", "dataExfiltrated");
       const explicitUnit = metricValue(input, "data_exfiltrated_unit", "dataExfiltratedUnit");
